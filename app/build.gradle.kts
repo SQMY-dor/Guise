@@ -122,6 +122,6 @@ dependencies {
     implementation(libs.kotlin.serialization.json)
     implementation(libs.betterandroid.extension.system)
     implementation(libs.lservice)
-    implementation(libs.libsu.io)
+    implementation("com.github.topjohnwu.libsu:io:3.1.5")
     implementation(libs.hiddenapibypass)
 }
