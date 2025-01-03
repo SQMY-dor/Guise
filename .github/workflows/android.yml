@@ -1,67 +1,29 @@
-name: Release
-on: 
-  push:
-    tags:
-      - '*'
-
+name: Android CI
+on:
+release:
+types: [published]
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Assemble Release with Gradle
-        run: ./gradlew assembleRelease
-
-      - name: List APK files before renaming
-        run: ls -R app/build/outputs/apk/
-
-      - name: Rename APK files
-        run: |
-          cd app/build/outputs/apk/release
-          tag_name="${GITHUB_REF_NAME}"
-          for apk in app-*-release.apk; do
-            # Extract ABI from the filename
-            abi="${apk#app-}"
-            abi="${abi%-release.apk}"
-            # Create new filename
-            new_name="ModManager-${tag_name}-${abi}.apk"
-            mv "$apk" "$new_name"
-          done
-        env:
-          GITHUB_REF_NAME: SQMY-dor
-      - name: List APK files after renaming
-        run: ls -R app/build/outputs/apk/release/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2.1.0
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: ${{ github.event.head_commit.message }}
-          draft: false
-          prerelease: false
-          files: |
-            app/build/outputs/apk/release/*.apk
+build:
+permissions: write-all
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v4
+with:
+fetch-depth: 0
+- name: set up JDK 11
+uses: actions/setup-java@v4
+with:
+java-version: '11'
+distribution: 'temurin'
+cache: gradle
+- name: Grant execute permission forgradlew
+run: chmod +x gradlew
+- name: Build with Gradle
+run: ./gradlew assembleDebug
+- name: Upload to Release Action
+uses: Shopify/upload-to-release@v1.0.1
+with:
+name: app-${{github.event.release.tag_name }}.apk
+path:app/build/outputs/apk/debug/app-debug.apk
+repo-token: ${{ github.token }}
+content-type:application/zip
