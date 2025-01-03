@@ -1,6 +1,7 @@
 name: Build & Publish Release APK
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*' # 或更精确的 'v*'
