@@ -25,7 +25,7 @@ jobs:
       run: ./gradlew assembleRelease
 
     - name: Releasing using Hub
-      uses: sangatdesai/release-apk@v1
+      uses: sangatdesai/release-apk@v4
     - name: Create local.properties
       run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
       env:
