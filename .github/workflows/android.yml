@@ -1,26 +1,30 @@
-name: Build & Publish Release APK
+name: Build APK
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - main
 
 jobs:
-  Gradle:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout code
-      uses: actions/checkout@v2
-    - name: setup jdk
-      uses: actions/setup-java@v1
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup JDK
+      uses: actions/setup-java@v4
       with:
-        java-version: 17
-    - name: Make Gradle executable
+        java-version: 21
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+
+    - name: Create local.properties
+      run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+
+    - name: Grant permissions
       run: chmod +x ./gradlew
-    - name: Build Release APK
+
+    - name: Build APK
       run: ./gradlew assembleRelease
-    - name: Releasing using Hub
-      uses: sangatdesai/release-apk@main
-      env:
-       GITHUB_TOKEN: ${{ secrets.TOKEN }}
-       APP_FOLDER: app
