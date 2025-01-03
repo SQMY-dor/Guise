@@ -1,13 +1,13 @@
-name: Build APK
+name: Build & Publish Release APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    tags:
+      - '*' # 或更精确的 'v*'
 
 jobs:
-  build:
+  Gradle:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -16,16 +16,18 @@ jobs:
     - name: Setup JDK
       uses: actions/setup-java@v4
       with:
-        java-version: 21
+        java-version: 11
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v2
-
-    - name: Create local.properties
-      run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
-
-    - name: Grant permissions
+    - name: Make Gradle executable
       run: chmod +x ./gradlew
 
-    - name: Build APK
+    - name: Build Release APK
       run: ./gradlew assembleRelease
+
+    - name: Releasing using Hub
+      uses: sangatdesai/release-apk@v1
+    - name: Create local.properties
+      run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        APP_FOLDER: app
