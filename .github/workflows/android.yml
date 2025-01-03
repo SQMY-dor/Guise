@@ -1,23 +1,68 @@
-# workflow的名称，会显示在github 的项目的Actions的右边列表中，如下图
-name: action-debug
+name: Release
+on: 
+  push:
+    tags:
+      - '*'
+
 jobs:
-# 多个job，如果有多个，每个以“-”开头
-  first-job:
-    # 该job 运行的系统环境，支持ubuntu 、windows、macOS
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      # 下面是多个step ，每个以“-”开头
-      # step：检查分支
-      - uses: actions/checkout@v1
-      # step：设置jdk版本
-      # step 名称
-      - name: set up JDK 1.8
-        # 引用公共action
-        uses: actions/setup-java@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          # 设置参数
-          java-version: 11
-      # step：打包apk
-      - name: Build with Gradle
-        # 运行命令
-        run: chmod +x gradlew &&./gradlew assembleDebug
+          distribution: temurin
+          java-version: 21
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Assemble Release with Gradle
+        run: ./gradlew assembleRelease
+
+      - name: List APK files before renaming
+        run: ls -R app/build/outputs/apk/
+
+      - name: Rename APK files
+        run: |
+          cd app/build/outputs/apk/release
+          tag_name="${GITHUB_REF_NAME}"
+          for apk in app-*-release.apk; do
+            # Extract ABI from the filename
+            abi="${apk#app-}"
+            abi="${abi%-release.apk}"
+            # Create new filename
+            new_name="ModManager-${tag_name}-${abi}.apk"
+            mv "$apk" "$new_name"
+          done
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: List APK files after renaming
+        run: ls -R app/build/outputs/apk/release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2.1.0
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
+          files: |
+            app/build/outputs/apk/release/*.apk
